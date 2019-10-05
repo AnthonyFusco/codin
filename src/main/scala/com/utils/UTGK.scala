@@ -100,6 +100,7 @@ class Entity() {
   var id: Int = 0
   var eType: EntityType.Value = EntityType.NOTHING
   var pos: Coord = _
+  var posCoordinate: Coordinate = _
   var item: EntityType.Value = EntityType.NOTHING
   var action: Action = _
 
@@ -108,6 +109,7 @@ class Entity() {
     id = in.nextInt
     eType = EntityType.valueOf(in.nextInt)
     pos = new Coord(in)
+    posCoordinate = Coordinate(pos.x, pos.y)
     item = EntityType.valueOf(in.nextInt)
   }
 
@@ -143,10 +145,12 @@ class Board(val in: Scanner) {
     myTeam.readScore(in)
     opponentTeam.readScore(in)
     cells = Array.ofDim[Cell](height, width)
+    ores = new java.util.ArrayList[Coord]
 
     for (y: Int <- 0 until height) {
       for (x: Int <- 0 until width) {
         cells(y)(x) = new Cell(in)
+        if (cells(y)(x).ore > 0) ores.add(Coordinate(x, y).toCoord)
       }
     }
 
@@ -165,7 +169,6 @@ class Board(val in: Scanner) {
         case EntityType.ENEMY_ROBOT => opponentTeam.robots.add(entity)
         case EntityType.RADAR => myRadarPos.add(entity.pos)
         case EntityType.TRAP => myTrapPos.add(entity.pos)
-        case EntityType.AMADEUSIUM => ores.add(entity.pos)
       }
     }
   }
