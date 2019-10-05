@@ -5,6 +5,7 @@ import java.util.Scanner
 import com.utils.EntityType.EntityType
 
 import scala.math._
+import scala.collection.JavaConverters._
 
 class Coord(val x: Int, val y: Int) {
   def this(in: Scanner) {
@@ -26,7 +27,7 @@ class Coord(val x: Int, val y: Int) {
   }
 
   override def equals(obj: Any): Boolean = {
-    if (this == obj) return true
+    //if (this == obj) return true
     if (obj == null) return false
     if (getClass ne obj.getClass) return false
     val other = obj.asInstanceOf[Coord]
@@ -127,6 +128,7 @@ class Team {
 }
 
 class Board(val in: Scanner) {
+  type OreState = (Coordinate, Boolean)
   // Given at startup
   val width: Int = in.nextInt
   val height: Int = in.nextInt
@@ -140,6 +142,21 @@ class Board(val in: Scanner) {
   var myRadarPos: java.util.Collection[Coord] = _
   var myTrapPos: java.util.Collection[Coord] = _
   var ores: java.util.Collection[Coord] = _
+  var mineCount: Int = 0
+  var oreStates: List[OreState] = List()
+
+  def getOresByDistance(r: Entity): List[(Int, Coordinate)] = {
+    val available = oreStates.filter(_._2).map(_._1)
+    available.map(x => (x.distance(r.posCoordinate), x)).sortBy(_._1)
+  }
+
+  def getClosestSingleOre(r: Entity): Option[Coordinate] = {
+    getOresByDistance(r).map(o => (o._1, getCell(o._2.toCoord), o._2)).find(t => t._2.ore == 2).map(_._3)
+  }
+
+  def getClosestOre(r: Entity): Coordinate = {
+    getOresByDistance(r).head._2
+  }
 
   def update(in: Scanner): Unit = {
     myTeam.readScore(in)
@@ -150,7 +167,9 @@ class Board(val in: Scanner) {
     for (y: Int <- 0 until height) {
       for (x: Int <- 0 until width) {
         cells(y)(x) = new Cell(in)
-        if (cells(y)(x).ore > 0) ores.add(Coordinate(x, y).toCoord)
+        if (cells(y)(x).ore > 0) {
+          ores.add(Coordinate(x, y).toCoord)
+        }
       }
     }
 

@@ -14,11 +14,8 @@ import scala.math.abs
  */
 abstract class Overmind() {
   type Strategy = (Board => Entity => Action)
-  type OreState = (Coordinate, Boolean)
+
   val strategy: Strategy
-  val getOres: (Board => List[OreState]) = b =>
-    if (b.ores == null) List()
-    else b.ores.asScala.toList.map(c => (Coordinate(c.x, c.y), false))
 
   def selectNextOrePos(board: Board): Coord =
     board.ores.asScala match {
@@ -37,24 +34,21 @@ case class Coordinate(x: Int, y: Int) {
 
 class Dwarf() extends Overmind {
 
-  def getClosestOre(ores: List[OreState], r: Entity): Coordinate = {
-    val available = ores.filter(!_._2).map(_._1)
-    available.map(x => (x.distance(r.posCoordinate), x)).minBy(_._1)._2
-  }
-
   override val strategy: Strategy = b => r => {
     val currentInputs = Inputs(Coordinate(r.pos.x, r.pos.y), r.item)
-    val ores = getOres(b)
     currentInputs match {
+      case _ if !r.isAlive => Action.none
+
       case Inputs(_, item) if item == EntityType.AMADEUSIUM
       => Action.move(new Coord(0, r.pos.y))
 
-      case Inputs(position, _) if b.getCell(position.toCoord).ore != 0
-      => Action.dig(position.toCoord)
+      case _ if b.oreStates.exists(_._2) =>
+        val closest = b.getClosestOre(r)
+        b.oreStates = b.oreStates.map(o => if (o._1 == closest && b.getCell(o._1.toCoord).ore == 1) (o._1, false) else o)
+        //System.err.println(b.oreStates)
+        Action.dig(closest.toCoord)
 
-      case _ if ores.nonEmpty => Action.dig(getClosestOre(ores, r).toCoord)
-
-      case _ => Action.none
+      case _ => Action.dig(Coordinate(9, r.pos.y).toCoord)
     }
   }
 
@@ -66,13 +60,13 @@ class Scout() extends Overmind {
     Coordinate(5,11),
     Coordinate(13,11),
     Coordinate(13,3),
+    Coordinate(17,7),
     Coordinate(21,3),
     Coordinate(21,11),
     Coordinate(25,7),
   )
 
   override val strategy: Strategy = b => r => {
-    val yPos = r.pos.y
     val radarsBoardsCoordinate = b.myRadarPos.asScala.map(position => Coordinate(position.x, position.y)).toList
     val diffRadAndCurrent = radarCoords diff radarsBoardsCoordinate
     val target = diffRadAndCurrent.headOption match {
@@ -81,10 +75,12 @@ class Scout() extends Overmind {
     }
     val currentInputs = Inputs(Coordinate(r.pos.x, r.pos.y), r.item)
     currentInputs match {
+      case _ if !r.isAlive => Action.none
+
       case Inputs(_, item) if item != EntityType.RADAR && target != Coordinate(-1, -1)
       => Action.request(EntityType.RADAR)
 
-      case Inputs(_, EntityType.RADAR) if target != Coordinate(-1, -1)
+      case Inputs(_, item) if target != Coordinate(-1, -1) && item == EntityType.RADAR
       => Action.dig(target.toCoord)
 
       case _ => new Dwarf().strategy(b)(r)
