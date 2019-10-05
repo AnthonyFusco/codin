@@ -61,12 +61,14 @@ class Dwarf() extends Overmind {
 }
 
 class Scout() extends Overmind {
-  val radarCoords: List[Coordinate] = List(Coordinate(6,3),
-    Coordinate(6,10),
-    Coordinate(11,6),
-    Coordinate(18,6),
-    Coordinate(23,3),
-    Coordinate(23,10),
+  val radarCoords: List[Coordinate] = List(Coordinate(9,7),
+    Coordinate(5,3),
+    Coordinate(5,11),
+    Coordinate(13,11),
+    Coordinate(13,3),
+    Coordinate(21,3),
+    Coordinate(21,11),
+    Coordinate(25,7),
   )
 
   override val strategy: Strategy = b => r => {
