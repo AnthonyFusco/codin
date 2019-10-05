@@ -61,18 +61,28 @@ class Dwarf() extends Overmind {
 }
 
 class Scout() extends Overmind {
+  val radarCoords: List[Coordinate] = List(Coordinate(6,3),
+    Coordinate(6,10),
+    Coordinate(11,6),
+    Coordinate(18,6),
+    Coordinate(23,3),
+    Coordinate(23,10),
+  )
+
   override val strategy: Strategy = b => r => {
     val yPos = r.pos.y
-    val target = Coordinate(15, 8)
+    val radarsBoardsCoordinate = b.myRadarPos.asScala.map(position => Coordinate(position.x, position.y)).toList
+    val diffRadAndCurrent = radarCoords diff radarsBoardsCoordinate
+    val target = diffRadAndCurrent.headOption match {
+      case Some(coordinate) => coordinate
+      case _ => Coordinate(-1, -1)
+    }
     val currentInputs = Inputs(Coordinate(r.pos.x, r.pos.y), r.item)
     currentInputs match {
-      case Inputs(_, item) if item != EntityType.RADAR
+      case Inputs(_, item) if item != EntityType.RADAR && target != Coordinate(-1, -1)
       => Action.request(EntityType.RADAR)
 
-      case Inputs(position, item) if position != target && item.equals(EntityType.RADAR)
-      => Action.move(target.toCoord)
-
-      case Inputs(Coordinate(15, 8), EntityType.RADAR)
+      case Inputs(_, EntityType.RADAR) if target != Coordinate(-1, -1)
       => Action.dig(target.toCoord)
 
       case _ => new Dwarf().strategy(b)(r)
