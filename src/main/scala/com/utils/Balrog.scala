@@ -29,7 +29,7 @@ object Balrog extends Overmind {
       case BalrogInputs(Some(mission), _, TRAP, _, _) => mission
 
       case BalrogInputs(None, Coordinate(0, _), NOTHING, _, _)
-        if !trapRequested && Board.myTrapCooldown == 0 =>
+        if !trapRequested && Board.myTrapCooldown == 0 && Board.myTrapPos.length <= 3 =>
         trapRequested = true
         Action.request(TRAP)
 
