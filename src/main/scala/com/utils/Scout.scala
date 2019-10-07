@@ -1,34 +1,33 @@
 package com.utils
-import scala.collection.JavaConverters._
 
-class Scout() extends Overmind {
-  val radarCoords: List[Coordinate] = List(Coordinate(9,7),
-    Coordinate(5,3),
-    Coordinate(5,11),
-    Coordinate(13,11),
-    Coordinate(13,3),
-    Coordinate(17,7),
-    Coordinate(21,3),
-    Coordinate(21,11),
-    Coordinate(25,7),
-  )
+object Scout extends Overmind {
 
-  override val strategy: Strategy = b => r => {
-    val radarsBoardsCoordinate = b.myRadarPos.map(position => Coordinate(position.x, position.y)).toList
-    val diffRadAndCurrent = radarCoords diff radarsBoardsCoordinate
-    val target = diffRadAndCurrent.headOption match {
-      case Some(coordinate) => coordinate
-      case _ => Coordinate(-1, -1)
+  var radarRequested: Boolean = false;
+  case class ScoutInputs(position: Coordinate, item: EntityType, target: Option[Coordinate]) extends BaseInputs
+
+  def nextRadarPos(): Option[Coordinate] ={
+    val radarsBoardsCoordinate = Board.myRadarPos.map(position => Coordinate(position.x, position.y)).toList
+    val diffRadAndCurrent = Board.radarCoords diff radarsBoardsCoordinate
+    diffRadAndCurrent.headOption match {
+      case Some(target) => if (Board.enemyHoles.contains(target)) Some(target.add(Coordinate(1, 0))) else Some(target)
+      case None => None
     }
-    val currentInputs = Inputs(Coordinate(r.pos.x, r.pos.y), r.item)
+  }
+
+  override def strategy(r: Entity): Action = {
+    val currentInputs = ScoutInputs(r.pos, r.item, nextRadarPos())
+    if (r.item == RADAR) radarRequested = false
+
     currentInputs match {
       case _ if !r.isAlive => Action.none
 
-      case Inputs(_, NOTHING) if target != Coordinate(-1, -1) => Action.request(RADAR)
+      case ScoutInputs(Coordinate(0, _), NOTHING, Some(_)) if !radarRequested && Board.myRadarCooldown == 0 =>
+        radarRequested = true
+        Action.request(RADAR)
 
-      case Inputs(_, RADAR) if target != Coordinate(-1, -1) => Action.dig(target)
+      case ScoutInputs(_, RADAR, Some(target)) => Action.dig(target)
 
-      case _ => new Dwarf().strategy(b)(r)
+      case _ => Balrog.strategy(r)
     }
 
   }

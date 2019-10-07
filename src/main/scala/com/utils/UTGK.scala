@@ -52,16 +52,37 @@ class Action private(val command: String, val pos: Coordinate, val item: EntityT
   }
 }
 
-sealed trait EntityType { def name: String }
-case object NOTHING extends EntityType { val name = "NOTHING" }
-case object ALLY_ROBOT extends EntityType { val name = "ALLY_ROBOT" }
-case object ENEMY_ROBOT extends EntityType { val name = "ENEMY_ROBOT" }
-case object RADAR extends EntityType { val name = "RADAR" }
-case object TRAP extends EntityType { val name = "TRAP" }
-case object AMADEUSIUM extends EntityType { val name = "AMADEUSIUM" }
+sealed trait EntityType {
+  def name: String
+}
+
+case object NOTHING extends EntityType {
+  val name = "NOTHING"
+}
+
+case object ALLY_ROBOT extends EntityType {
+  val name = "ALLY_ROBOT"
+}
+
+case object ENEMY_ROBOT extends EntityType {
+  val name = "ENEMY_ROBOT"
+}
+
+case object RADAR extends EntityType {
+  val name = "RADAR"
+}
+
+case object TRAP extends EntityType {
+  val name = "TRAP"
+}
+
+case object AMADEUSIUM extends EntityType {
+  val name = "AMADEUSIUM"
+}
 
 object Entity {
   def DEAD_POS = Coordinate(-1, -1)
+
   def createEntityType(i: Int): EntityType = {
     i match {
       case -1 => NOTHING
@@ -78,7 +99,6 @@ class Entity() {
   var id: Int = 0
   var eType: EntityType = NOTHING
   var pos: Coordinate = _
-  var posCoordinate: Coordinate = _
   var item: EntityType = NOTHING
   var action: Action = _
 
@@ -87,7 +107,6 @@ class Entity() {
     id = in.nextInt
     eType = Entity.createEntityType(in.nextInt)
     pos = Coordinate(in.nextInt, in.nextInt)
-    posCoordinate = Coordinate(pos.x, pos.y)
     item = Entity.createEntityType(in.nextInt)
   }
 
@@ -104,9 +123,10 @@ class Team {
   }
 }
 
-class Board(val in: Scanner) {
-  val width: Int = in.nextInt
-  val height: Int = in.nextInt
+object Board {
+  var in: Scanner = _
+  var width: Int = _
+  var height: Int = _
   val myTeam = new Team
   val opponentTeam = new Team
   var cells: Array[Array[Cell]] = _
@@ -116,42 +136,42 @@ class Board(val in: Scanner) {
   var myRadarPos: Vector[Coordinate] = _
   var myTrapPos: Vector[Coordinate] = _
   var ores: Vector[Coordinate] = _
-  var mineCount: Int = 0
-  var oreStates: Map[Coordinate, Boolean] = Map.empty
-
-  def getOresByDistance(r: Entity): List[(Int, Coordinate)] = {
-    val available = oreStates.filter(_._2).keys.toList
-    available.map(x => (x.distance(r.posCoordinate), x)).sortBy(_._1)
-  }
-
-  def getClosestSingleOre(r: Entity): Option[Coordinate] = {
-    getOresByDistance(r).map(o => (o._1, getCell(o._2), o._2)).find(t => t._2.ore == 2).map(_._3)
-  }
-
-  def getClosestOre(r: Entity): Coordinate = {
-    getOresByDistance(r).head._2
-  }
+  val radarCoords: List[Coordinate] = List(
+    Coordinate(9, 7),
+    Coordinate(5, 3),
+    Coordinate(13, 11),
+    Coordinate(13, 3),
+    Coordinate(5, 11),
+    Coordinate(17, 7),
+    Coordinate(21, 3),
+    Coordinate(21, 11),
+    Coordinate(25, 7),
+  )
+  var myHoles: Set[Coordinate] = Set()
+  var enemyHoles: Vector[Coordinate] = _
+  var holes: Vector[Coordinate] = _
 
   def update(in: Scanner): Unit = {
     myTeam.readScore(in)
     opponentTeam.readScore(in)
     cells = Array.ofDim[Cell](height, width)
     ores = Vector()
+    holes = Vector()
+    enemyHoles = Vector()
 
     for (y: Int <- 0 until height) {
       for (x: Int <- 0 until width) {
         cells(y)(x) = new Cell(in)
+        if (cells(y)(x).hole) {
+          holes = holes :+ Coordinate(x, y)
+        }
         if (cells(y)(x).ore > 0) {
           ores = ores :+ Coordinate(x, y)
         }
       }
     }
 
-    ores.foreach(o => {
-      if(oreStates.get(Coordinate(o.x, o.y)).isEmpty && getCell(Coordinate(o.x, o.y)).ore > 0) {
-        oreStates = oreStates.updated(Coordinate(o.x, o.y), true)
-      }
-    })
+    enemyHoles = holes diff myHoles.toList
 
     val entityCount = in.nextInt
     myRadarCooldown = in.nextInt
@@ -172,6 +192,7 @@ class Board(val in: Scanner) {
         case NOTHING =>
       }
     }
+
   }
 
   def cellExist(pos: Coordinate): Boolean = (pos.x >= 0) && (pos.y >= 0) && (pos.x < width) && (pos.y < height)

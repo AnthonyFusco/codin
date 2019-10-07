@@ -7,31 +7,35 @@ import com.utils.{Balrog, Board, Dwarf, Entity, Scout}
 
 object Player extends App {
   final val in = new Scanner(System.in)
-  val board = new Board(in)
-
-  var n = 0
+  Board.width = in.nextInt
+  Board.height = in.nextInt
+  Board.in = in
 
   while (true) {
-    board.update(in)
+    Board.update(in)
 
-    val scout = new Scout
-    val dwarf = new Dwarf
-    val balrog = new Balrog
+    Board.myTeam.robots.asScala.foreach(r => {
+      r.action = r.id match {
+        case 0 | 5 => Scout.strategy(r)
+        case 1 | 6 => Scout.strategy(r)
+        case 2 | 7 => Scout.strategy(r)
+        case 3 | 8 => Scout.strategy(r)
+        case 4 | 9 => Scout.strategy(r)
+      }
+    })
 
-    val scoutStrat = scout.strategy(board)
-    val balrogStrat = balrog.strategy(board)
-    val dwarfStrat = dwarf.strategy(board)
+    //count ama to know if enemy dug in your hole
+    //if radar is compromised, dig next to it
+    //random dig if nothing
+    //if all mined when all radar up => mine unsafe
+    //rapport radar/ore
+    //kamikaze
 
-    board.myTeam.robots.asScala.head.action = balrogStrat(board.myTeam.robots.asScala.head)
-    board.myTeam.robots.asScala.tail.head.action = scoutStrat(board.myTeam.robots.asScala.tail.head)
-    board.myTeam.robots.asScala.tail.tail.foreach(r => r.action = dwarfStrat(r))
-
-    for (robot: Entity <- board.myTeam.robots.asScala) {
+    for (robot: Entity <- Board.myTeam.robots.asScala) {
       robot.action.message = robot.id.toString
       println(robot.action)
     }
 
-    n = n + 1
   }
 
 }
