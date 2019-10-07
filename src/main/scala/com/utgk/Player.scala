@@ -24,6 +24,7 @@ object Player extends App {
       }
     })
 
+    //kamikaze on unsafe if enemy in range
     //more radar in the endgame
     //count ama to know if enemy dug in your hole
     //if radar is compromised, dig next to it

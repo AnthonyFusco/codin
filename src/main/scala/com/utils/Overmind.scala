@@ -1,48 +1,49 @@
 package com.utils
 
-import scala.math.abs
-
 abstract class Overmind {
   def strategy(r: Entity): Action
 
-  def oresByDistance(r: Entity): List[Coordinate] = {
-    val available = Board.ores.toList
-    available.map(x => (x.distance(r.pos), x)).sortBy(_._1).map(_._2)
+  def oresByDistance(r: Entity): List[Coord] = {
+    Board.ores.map(x => (x.distance(r.pos), x)).sortBy(_._1).map(_._2).toList
   }
 
-  def furthestTrapPos(r: Entity): Option[Coordinate] = {
-    val oreWithoutTrap = Board.ores.toList.diff(Board.myTrapPos).diff(Board.enemyHoles)
-    val furthest = oreWithoutTrap.map(x => (x.distance(r.pos), x)).sortBy(_._1).map(_._2).reverse
-    var res = furthest.map(c => (c, Board.getCell(c))).find(_._2.ore == 2).map(_._1)
-    res = if (res.isEmpty) furthest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 2).map(_._1) else res
-    if (res.isEmpty) furthest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 1).map(_._1) else res
+  def closestSafeOres(r: Entity): List[Coord] = {
+    oresByDistance(r).diff(Board.myTrapPos).diff(Board.enemyHoles)
   }
 
-  def closestTrapPos(r: Entity): Option[Coordinate] = {
-    val oreWithoutTrap = Board.ores.toList.diff(Board.myTrapPos).diff(Board.enemyHoles)
-    val furthest = oreWithoutTrap.map(x => (x.distance(r.pos), x)).sortBy(_._1).map(_._2)
-    var res = furthest.map(c => (c, Board.getCell(c))).find(_._2.ore == 2).map(_._1)
-    res = if (res.isEmpty) furthest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 2).map(_._1) else res
-    if (res.isEmpty) furthest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 1).map(_._1) else res
+  def closestSafeUntouchedOres(r: Entity): List[Coord] = {
+    oresByDistance(r).diff(Board.myTrapPos).diff(Board.enemyHoles).diff(Board.myHoles.toVector)
   }
 
-  def closestSafeOre(r: Entity): Option[Coordinate] = {
-    oresByDistance(r).diff(Board.myTrapPos).diff(Board.enemyHoles).headOption
+  def closestUnsafeOres(r: Entity): List[Coord] = {
+    oresByDistance(r).diff(Board.myTrapPos)
   }
 
-  def closestEnemyHole(r: Entity): Option[Coordinate] = {
+  def nextClosestTrapPos(r: Entity): Option[Coord] = {
+    val closest = closestSafeOres(r)
+    var res = closest.map(c => (c, Board.getCell(c))).find(_._2.ore == 2).map(_._1)
+    res = if (res.isEmpty) closest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 2).map(_._1) else res
+    if (res.isEmpty) closest.map(c => (c, Board.getCell(c))).find(_._2.ore >= 1).map(_._1) else res
+  }
+
+  def closestEnemyHole(r: Entity): Option[Coord] = {
     Board.enemyHoles.diff(Board.myTrapPos).map(x => (x.distance(r.pos), x)).sortBy(_._1).map(_._2).headOption
+  }
+
+  def registerPickup(target: Coord): Unit = {
+    Board.myHoles = Board.myHoles + target
+    if (!Board.orePrediction.contains(target)) {
+      Board.orePrediction = Board.orePrediction + (target -> (Board.getCell(target).ore - 1))
+    } else {
+      Board.orePrediction = Board.orePrediction + (target -> (Board.orePrediction(target) - 1))
+    }
   }
 }
 
 trait BaseInputs {
-  def position: Coordinate
+  def position: Coord
+
   def item: EntityType
 }
 
-case class Inputs(position: Coordinate, item: EntityType) extends BaseInputs
-
-case class Coordinate(x: Int, y: Int) {
-  def distance(other: Coordinate): Int = abs(x - other.x) + abs(y - other.y)
-  def add(other: Coordinate) = Coordinate(x + other.x, y + other.y)
-}
+case class Inputs(position: Coord, item: EntityType) extends BaseInputs

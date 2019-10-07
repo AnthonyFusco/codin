@@ -1,7 +1,9 @@
 package com.utils
 
 import java.util.Scanner
+
 import scala.collection.JavaConverters._
+import scala.math.abs
 
 class Cell {
   var known = false
@@ -33,14 +35,14 @@ class Cell {
 object Action {
   def none = new Action("WAIT", null, null)
 
-  def move(pos: Coordinate) = new Action("MOVE", pos, null)
+  def move(pos: Coord) = new Action("MOVE", pos, null)
 
-  def dig(pos: Coordinate) = new Action("DIG", pos, null)
+  def dig(pos: Coord) = new Action("DIG", pos, null)
 
   def request(item: EntityType) = new Action("REQUEST", null, item)
 }
 
-class Action private(val command: String, val pos: Coordinate, val item: EntityType) {
+class Action private(val command: String, val pos: Coord, val item: EntityType) {
   var message: String = _
 
   override def toString: String = {
@@ -81,7 +83,7 @@ case object AMADEUSIUM extends EntityType {
 }
 
 object Entity {
-  def DEAD_POS = Coordinate(-1, -1)
+  def DEAD_POS = Coord(-1, -1)
 
   def createEntityType(i: Int): EntityType = {
     i match {
@@ -98,7 +100,7 @@ object Entity {
 class Entity() {
   var id: Int = 0
   var eType: EntityType = NOTHING
-  var pos: Coordinate = _
+  var pos: Coord = _
   var item: EntityType = NOTHING
   var action: Action = _
 
@@ -106,7 +108,7 @@ class Entity() {
     this()
     id = in.nextInt
     eType = Entity.createEntityType(in.nextInt)
-    pos = Coordinate(in.nextInt, in.nextInt)
+    pos = Coord(in.nextInt, in.nextInt)
     item = Entity.createEntityType(in.nextInt)
   }
 
@@ -123,6 +125,12 @@ class Team {
   }
 }
 
+case class Coord(x: Int, y: Int) {
+  def distance(other: Coord): Int = abs(x - other.x) + abs(y - other.y)
+
+  def add(other: Coord) = Coord(x + other.x, y + other.y)
+}
+
 object Board {
   var in: Scanner = _
   var width: Int = _
@@ -133,45 +141,51 @@ object Board {
   var myRadarCooldown = 0
   var myTrapCooldown = 0
   var entitiesById: java.util.Map[Integer, Entity] = _
-  var myRadarPos: Vector[Coordinate] = _
-  var myTrapPos: Vector[Coordinate] = _
-  var ores: Vector[Coordinate] = _
-  var radarCoords: List[Coordinate] = List(
-    Coordinate(9, 7),
-    Coordinate(5, 3),
-    Coordinate(13, 11),
-    Coordinate(13, 3),
-    Coordinate(5, 11),
-    Coordinate(17, 7),
-    Coordinate(21, 3),
-    Coordinate(21, 11),
-    Coordinate(25, 7),
+  var myRadarPos: Vector[Coord] = _
+  var myTrapPos: Vector[Coord] = _
+  var ores: Vector[Coord] = _
+  var radarCoords: List[Coord] = List(
+    Coord(5, 3),
+    Coord(9, 7),
+    Coord(13, 11),
+    Coord(13, 3),
+    Coord(5, 11),
+    Coord(17, 7),
+    Coord(21, 3),
+    Coord(21, 11),
+    Coord(25, 7),
+    Coord(28, 12),
+    Coord(27, 1)
   )
-  var myHoles: Set[Coordinate] = Set()
-  var enemyHoles: Vector[Coordinate] = _
-  var holes: Vector[Coordinate] = _
+  var n = 0
+  var myHoles: Set[Coord] = Set()
+  var enemyHoles: Vector[Coord] = _
+  var holes: Vector[Coord] = _
+  var orePrediction: Map[Coord, Int] = Map()
+  var globalOreCount: Map[Coord, Int] = Map()
 
   def update(in: Scanner): Unit = {
     myTeam.readScore(in)
     opponentTeam.readScore(in)
     cells = Array.ofDim[Cell](height, width)
     ores = Vector()
-    holes = Vector()
+
     enemyHoles = Vector()
+    holes = Vector()
 
     for (y: Int <- 0 until height) {
       for (x: Int <- 0 until width) {
         cells(y)(x) = new Cell(in)
-        if (cells(y)(x).hole) {
-          holes = holes :+ Coordinate(x, y)
-        }
-        if (cells(y)(x).ore > 0) {
-          ores = ores :+ Coordinate(x, y)
-        }
+        globalOreCount = globalOreCount + (Coord(x, y) -> cells(y)(x).ore)
+        if (cells(y)(x).hole) holes = holes :+ Coord(x, y)
+        if (cells(y)(x).ore > 0) ores = ores :+ Coord(x, y)
       }
     }
 
     enemyHoles = holes diff myHoles.toList
+    val diffOrePicks = orePrediction.filter(p => globalOreCount(p._1) < p._2).keys.toVector
+    System.err.println(s"diffOrePicks: $diffOrePicks")
+    enemyHoles = enemyHoles ++ diffOrePicks
 
     val entityCount = in.nextInt
     myRadarCooldown = in.nextInt
@@ -186,16 +200,17 @@ object Board {
       entity.eType match {
         case ALLY_ROBOT => myTeam.robots.add(entity)
         case ENEMY_ROBOT => opponentTeam.robots.add(entity)
-        case RADAR => myRadarPos = myRadarPos :+ Coordinate(entity.pos.x, entity.pos.y)
-        case TRAP => myTrapPos = myTrapPos :+ Coordinate(entity.pos.x, entity.pos.y)
+        case RADAR => myRadarPos = myRadarPos :+ Coord(entity.pos.x, entity.pos.y)
+        case TRAP => myTrapPos = myTrapPos :+ Coord(entity.pos.x, entity.pos.y)
         case AMADEUSIUM =>
         case NOTHING =>
       }
     }
-
+    n = n + 1
   }
 
-  def cellExist(pos: Coordinate): Boolean = (pos.x >= 0) && (pos.y >= 0) && (pos.x < width) && (pos.y < height)
 
-  def getCell(pos: Coordinate): Cell = cells(pos.y)(pos.x)
+  def cellExist(pos: Coord): Boolean = (pos.x >= 0) && (pos.y >= 0) && (pos.x < width) && (pos.y < height)
+
+  def getCell(pos: Coord): Cell = cells(pos.y)(pos.x)
 }
