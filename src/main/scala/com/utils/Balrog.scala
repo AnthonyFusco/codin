@@ -20,7 +20,7 @@ object Balrog extends Overmind {
 
   override def strategy(r: Entity): Action = {
     currentMission = updateMission()
-    val currentInputs = BalrogInputs(currentMission, r.pos, r.item, Board.myTrapPos.length, furthestTrapPos(r))
+    val currentInputs = BalrogInputs(currentMission, r.pos, r.item, Board.myTrapPos.length, closestTrapPos(r))
     if (r.item == TRAP) trapRequested = false
 
     currentInputs match {

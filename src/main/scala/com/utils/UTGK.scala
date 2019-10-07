@@ -136,7 +136,7 @@ object Board {
   var myRadarPos: Vector[Coordinate] = _
   var myTrapPos: Vector[Coordinate] = _
   var ores: Vector[Coordinate] = _
-  val radarCoords: List[Coordinate] = List(
+  var radarCoords: List[Coordinate] = List(
     Coordinate(9, 7),
     Coordinate(5, 3),
     Coordinate(13, 11),
